@@ -1,0 +1,13 @@
+{
+  "name": "reikiait-ai-widget",
+  "version": "1.0.0",
+  "description": "ReikiaIT AI Chat Widget with Gemini API",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'No build step needed'",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0"
+  }
+}
