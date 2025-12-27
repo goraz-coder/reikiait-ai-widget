@@ -8,6 +8,12 @@ Niekada neminėk konkurentų pavadinimų.
 Atsakymus pateik glaustai ir aiškiai, maksimum 3-4 sakiniai, nebent reikia detalesnio paaiškinimo.`;
 
 module.exports = async (req, res) => {
+  // Set CORS headers for all requests
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     res.status(200).end();
@@ -19,7 +25,7 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const { message, history } = req.body;
+  const { message, history } = req.body || {};
 
   if (!message) {
     res.status(400).json({ error: "Message is required" });
@@ -28,40 +34,29 @@ module.exports = async (req, res) => {
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    res.status(500).json({ error: "API key not configured" });
+    console.error("GEMINI_API_KEY is not set");
+    res.status(500).json({ error: "API key not configured", debug: "No API key found in environment" });
     return;
   }
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ 
+    const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash",
       systemInstruction: SYSTEM_INSTRUCTION,
     });
 
-    // Build chat history
-    const chatHistory = (history || []).map(msg => ({
-      role: msg.role === "assistant" ? "model" : "user",
-      parts: [{ text: msg.content }]
-    }));
-
-    const chat = model.startChat({
-      history: chatHistory,
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 500,
-      },
-    });
-
-    const result = await chat.sendMessage(message);
+    // Simple message without chat history for now
+    const result = await model.generateContent(message);
     const response = await result.response;
     const text = response.text();
 
     res.status(200).json({ response: text });
   } catch (error) {
-    console.error("Gemini API Error:", error);
-    res.status(500).json({ 
-      error: "Atsiprašome, šiuo metu kilo techninių kliūčių. Prašome kreiptis tiesiogiai tel. +370 645 69000." 
+    console.error("Gemini API Error:", error.message || error);
+    res.status(500).json({
+      error: "Atsiprašome, šiuo metu kilo techninių kliūčių. Prašome kreiptis tiesiogiai tel. +370 645 69000.",
+      debug: error.message || "Unknown error"
     });
   }
 };

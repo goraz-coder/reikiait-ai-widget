@@ -1,9 +1,9 @@
 (function () {
-    // Configuration - will be set by the embed script
-    const API_URL = window.REIKIAIT_API_URL || '';
+  // Configuration - will be set by the embed script
+  const API_URL = window.REIKIAIT_API_URL || '';
 
-    // Styles
-    const styles = `
+  // Styles
+  const styles = `
     #reikiait-widget-container * {
       box-sizing: border-box;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -12,7 +12,7 @@
     #reikiait-widget-btn {
       position: fixed;
       bottom: 24px;
-      right: 24px;
+      left: 24px;
       width: 64px;
       height: 64px;
       background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
@@ -55,7 +55,7 @@
     #reikiait-chat-window {
       position: fixed;
       bottom: 100px;
-      right: 24px;
+      left: 24px;
       width: 380px;
       height: 520px;
       max-width: calc(100vw - 48px);
@@ -266,26 +266,26 @@
       
       #reikiait-widget-btn {
         bottom: 16px;
-        right: 16px;
+        left: 16px;
       }
     }
   `;
 
-    // Inject styles
-    const styleSheet = document.createElement('style');
-    styleSheet.textContent = styles;
-    document.head.appendChild(styleSheet);
+  // Inject styles
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
 
-    // Load Inter font
-    const fontLink = document.createElement('link');
-    fontLink.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap';
-    fontLink.rel = 'stylesheet';
-    document.head.appendChild(fontLink);
+  // Load Inter font
+  const fontLink = document.createElement('link');
+  fontLink.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap';
+  fontLink.rel = 'stylesheet';
+  document.head.appendChild(fontLink);
 
-    // Create widget HTML
-    const container = document.createElement('div');
-    container.id = 'reikiait-widget-container';
-    container.innerHTML = `
+  // Create widget HTML
+  const container = document.createElement('div');
+  container.id = 'reikiait-widget-container';
+  container.innerHTML = `
     <button id="reikiait-widget-btn" aria-label="Atidaryti IT pagalbos pokalbį">
       <div class="pulse"></div>
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -318,114 +318,114 @@
       </form>
     </div>
   `;
-    document.body.appendChild(container);
+  document.body.appendChild(container);
 
-    // Widget logic
-    const widgetBtn = document.getElementById('reikiait-widget-btn');
-    const chatWindow = document.getElementById('reikiait-chat-window');
-    const closeBtn = chatWindow.querySelector('.close-btn');
-    const messagesContainer = document.getElementById('reikiait-messages');
-    const inputForm = document.getElementById('reikiait-input-form');
-    const input = document.getElementById('reikiait-input');
-    const sendBtn = document.getElementById('reikiait-send-btn');
+  // Widget logic
+  const widgetBtn = document.getElementById('reikiait-widget-btn');
+  const chatWindow = document.getElementById('reikiait-chat-window');
+  const closeBtn = chatWindow.querySelector('.close-btn');
+  const messagesContainer = document.getElementById('reikiait-messages');
+  const inputForm = document.getElementById('reikiait-input-form');
+  const input = document.getElementById('reikiait-input');
+  const sendBtn = document.getElementById('reikiait-send-btn');
 
-    let isOpen = false;
-    let isLoading = false;
-    let chatHistory = [];
+  let isOpen = false;
+  let isLoading = false;
+  let chatHistory = [];
 
-    // Initial greeting
-    const greeting = 'Sveiki! Aš esu ReikiaIT dirbtinio intelekto asistentas. Kokios IT problemos Jus šiandien kankina? Aprašykite situaciją, o aš pasistengsiu padėti diagnozuoti gedimą.';
+  // Initial greeting
+  const greeting = 'Sveiki! Aš esu ReikiaIT dirbtinio intelekto asistentas. Kokios IT problemos Jus šiandien kankina? Aprašykite situaciją, o aš pasistengsiu padėti diagnozuoti gedimą.';
 
-    function addMessage(content, role) {
-        const msg = document.createElement('div');
-        msg.className = `reikiait-message ${role}`;
-        msg.textContent = content;
-        messagesContainer.appendChild(msg);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  function addMessage(content, role) {
+    const msg = document.createElement('div');
+    msg.className = `reikiait-message ${role}`;
+    msg.textContent = content;
+    messagesContainer.appendChild(msg);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
-        if (role !== 'typing') {
-            chatHistory.push({ role, content });
-        }
+    if (role !== 'typing') {
+      chatHistory.push({ role, content });
     }
+  }
 
-    function showTyping() {
-        const typing = document.createElement('div');
-        typing.className = 'reikiait-typing';
-        typing.id = 'reikiait-typing-indicator';
-        typing.innerHTML = '<span></span><span></span><span></span>';
-        messagesContainer.appendChild(typing);
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  function showTyping() {
+    const typing = document.createElement('div');
+    typing.className = 'reikiait-typing';
+    typing.id = 'reikiait-typing-indicator';
+    typing.innerHTML = '<span></span><span></span><span></span>';
+    messagesContainer.appendChild(typing);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+
+  function hideTyping() {
+    const typing = document.getElementById('reikiait-typing-indicator');
+    if (typing) typing.remove();
+  }
+
+  function toggleChat() {
+    isOpen = !isOpen;
+    if (isOpen) {
+      chatWindow.classList.add('open');
+      widgetBtn.style.display = 'none';
+      input.focus();
+
+      // Add greeting if first time
+      if (messagesContainer.children.length === 0) {
+        addMessage(greeting, 'assistant');
+      }
+    } else {
+      chatWindow.classList.remove('open');
+      widgetBtn.style.display = 'flex';
     }
+  }
 
-    function hideTyping() {
-        const typing = document.getElementById('reikiait-typing-indicator');
-        if (typing) typing.remove();
+  async function sendMessage(message) {
+    if (!message.trim() || isLoading) return;
+
+    addMessage(message, 'user');
+    input.value = '';
+    isLoading = true;
+    sendBtn.disabled = true;
+    showTyping();
+
+    try {
+      const response = await fetch(API_URL + '/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          history: chatHistory.slice(0, -1) // Exclude the message we just added
+        })
+      });
+
+      hideTyping();
+
+      if (!response.ok) throw new Error('API error');
+
+      const data = await response.json();
+      addMessage(data.response || data.error, 'assistant');
+    } catch (error) {
+      hideTyping();
+      addMessage('Atsiprašome, kilo techninių kliūčių. Prašome kreiptis tiesiogiai tel. +370 645 69000.', 'assistant');
+    } finally {
+      isLoading = false;
+      sendBtn.disabled = false;
     }
+  }
 
-    function toggleChat() {
-        isOpen = !isOpen;
-        if (isOpen) {
-            chatWindow.classList.add('open');
-            widgetBtn.style.display = 'none';
-            input.focus();
+  // Event listeners
+  widgetBtn.addEventListener('click', toggleChat);
+  closeBtn.addEventListener('click', toggleChat);
 
-            // Add greeting if first time
-            if (messagesContainer.children.length === 0) {
-                addMessage(greeting, 'assistant');
-            }
-        } else {
-            chatWindow.classList.remove('open');
-            widgetBtn.style.display = 'flex';
-        }
+  inputForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    sendMessage(input.value);
+  });
+
+  // Close on escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isOpen) {
+      toggleChat();
     }
-
-    async function sendMessage(message) {
-        if (!message.trim() || isLoading) return;
-
-        addMessage(message, 'user');
-        input.value = '';
-        isLoading = true;
-        sendBtn.disabled = true;
-        showTyping();
-
-        try {
-            const response = await fetch(API_URL + '/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message,
-                    history: chatHistory.slice(0, -1) // Exclude the message we just added
-                })
-            });
-
-            hideTyping();
-
-            if (!response.ok) throw new Error('API error');
-
-            const data = await response.json();
-            addMessage(data.response || data.error, 'assistant');
-        } catch (error) {
-            hideTyping();
-            addMessage('Atsiprašome, kilo techninių kliūčių. Prašome kreiptis tiesiogiai tel. +370 645 69000.', 'assistant');
-        } finally {
-            isLoading = false;
-            sendBtn.disabled = false;
-        }
-    }
-
-    // Event listeners
-    widgetBtn.addEventListener('click', toggleChat);
-    closeBtn.addEventListener('click', toggleChat);
-
-    inputForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        sendMessage(input.value);
-    });
-
-    // Close on escape key
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && isOpen) {
-            toggleChat();
-        }
-    });
+  });
 })();
