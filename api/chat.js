@@ -1,6 +1,6 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const SYSTEM_INSTRUCTION = `Esi profesionalus IT konsultantas iš įmonės "ReikiaIT". 
+const SYSTEM_CONTEXT = `Esi profesionalus IT konsultantas iš įmonės "ReikiaIT". 
 Atsakinėk lietuvių kalba, būk mandagus, profesionalus ir konkretus. 
 Tavo tikslas - padėti vartotojui diagnozuoti jo IT problemą (kompiuterių gedimai, tinklo trikdžiai, programinės įrangos klaidos).
 Jei problema atrodo sudėtinga, pasiūlyk kreiptis į ReikiaIT specialistus tel. +370 645 69000 arba el. paštu gediminas@reikiait.lt.
@@ -25,7 +25,7 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const { message, history } = req.body || {};
+  const { message } = req.body || {};
 
   if (!message) {
     res.status(400).json({ error: "Message is required" });
@@ -35,19 +35,18 @@ module.exports = async (req, res) => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     console.error("GEMINI_API_KEY is not set");
-    res.status(500).json({ error: "API key not configured", debug: "No API key found in environment" });
+    res.status(500).json({ error: "API key not configured" });
     return;
   }
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-pro",
-      systemInstruction: SYSTEM_INSTRUCTION,
-    });
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
-    // Simple message without chat history for now
-    const result = await model.generateContent(message);
+    // Combine system context with user message
+    const fullPrompt = `${SYSTEM_CONTEXT}\n\nVartotojo klausimas: ${message}\n\nTavo atsakymas:`;
+
+    const result = await model.generateContent(fullPrompt);
     const response = await result.response;
     const text = response.text();
 
