@@ -1,5 +1,3 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-
 const SYSTEM_CONTEXT = `Esi profesionalus IT konsultantas iš įmonės "ReikiaIT". 
 Atsakinėk lietuvių kalba, būk mandagus, profesionalus ir konkretus. 
 Tavo tikslas - padėti vartotojui diagnozuoti jo IT problemą (kompiuterių gedimai, tinklo trikdžiai, programinės įrangos klaidos).
@@ -40,17 +38,62 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    // Try different models in order of preference
+    const models = [
+      'gemini-2.0-flash',
+      'gemini-1.5-flash',
+      'gemini-1.5-pro',
+      'gemini-pro'
+    ];
 
-    // Combine system context with user message
-    const fullPrompt = `${SYSTEM_CONTEXT}\n\nVartotojo klausimas: ${message}\n\nTavo atsakymas:`;
+    let lastError = null;
 
-    const result = await model.generateContent(fullPrompt);
-    const response = await result.response;
-    const text = response.text();
+    for (const modelName of models) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-    res.status(200).json({ response: text });
+        const fullPrompt = `${SYSTEM_CONTEXT}\n\nVartotojo klausimas: ${message}\n\nTavo atsakymas:`;
+
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{ text: fullPrompt }]
+            }],
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 500,
+            }
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.error) {
+          console.log(`Model ${modelName} failed:`, data.error.message);
+          lastError = data.error.message;
+          continue;
+        }
+
+        if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+          const text = data.candidates[0].content.parts[0].text;
+          console.log(`Success with model: ${modelName}`);
+          res.status(200).json({ response: text });
+          return;
+        }
+      } catch (e) {
+        console.log(`Model ${modelName} threw error:`, e.message);
+        lastError = e.message;
+        continue;
+      }
+    }
+
+    // All models failed
+    throw new Error(lastError || "All models failed");
+
   } catch (error) {
     console.error("Gemini API Error:", error.message || error);
     res.status(500).json({
