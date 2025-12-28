@@ -38,21 +38,24 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // Try different models in order of preference
-    const models = [
-      'gemini-2.0-flash',
-      'gemini-1.5-flash',
-      'gemini-1.5-pro',
-      'gemini-pro'
+    // Try different API versions and models
+    const attempts = [
+      { version: 'v1beta', model: 'gemini-2.0-flash-exp' },
+      { version: 'v1', model: 'gemini-pro' },
+      { version: 'v1', model: 'gemini-1.5-flash' },
+      { version: 'v1beta', model: 'gemini-1.5-flash-latest' },
+      { version: 'v1beta', model: 'gemini-pro-latest' },
     ];
 
     let lastError = null;
 
-    for (const modelName of models) {
+    for (const { version, model } of attempts) {
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/${version}/models/${model}:generateContent?key=${apiKey}`;
 
         const fullPrompt = `${SYSTEM_CONTEXT}\n\nVartotojo klausimas: ${message}\n\nTavo atsakymas:`;
+
+        console.log(`Trying ${version}/${model}...`);
 
         const response = await fetch(url, {
           method: 'POST',
@@ -73,25 +76,25 @@ module.exports = async (req, res) => {
         const data = await response.json();
 
         if (data.error) {
-          console.log(`Model ${modelName} failed:`, data.error.message);
+          console.log(`${version}/${model} failed:`, data.error.message);
           lastError = data.error.message;
           continue;
         }
 
         if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
           const text = data.candidates[0].content.parts[0].text;
-          console.log(`Success with model: ${modelName}`);
+          console.log(`Success with ${version}/${model}`);
           res.status(200).json({ response: text });
           return;
         }
       } catch (e) {
-        console.log(`Model ${modelName} threw error:`, e.message);
+        console.log(`${version}/${model} threw error:`, e.message);
         lastError = e.message;
         continue;
       }
     }
 
-    // All models failed
+    // All attempts failed
     throw new Error(lastError || "All models failed");
 
   } catch (error) {
